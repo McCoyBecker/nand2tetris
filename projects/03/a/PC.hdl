@@ -5,10 +5,10 @@
 
 /**
  * A 16-bit counter with load and reset control bits.
- * if      (reset[t] == 1) out[t+1] = 0
- * else if (load[t] == 1)  out[t+1] = in[t]
- * else if (inc[t] == 1)   out[t+1] = out[t] + 1  (integer addition)
- * else                    out[t+1] = out[t]
+ * if      (reset[t]==1) out[t+1] = 0
+ * else if (load[t]==1)  out[t+1] = in[t]
+ * else if (inc[t]==1)   out[t+1] = out[t] + 1  (integer addition)
+ * else                  out[t+1] = out[t]
  */
 
 CHIP PC {
@@ -16,5 +16,23 @@ CHIP PC {
     OUT out[16];
 
     PARTS:
-    Bit(in = reset
+/**
+* Incrementer
+*/
+
+    Inc16(in = feedbackOutput, out = IncOut);
+
+/**
+* Mux logic to determine what gets sent into the register
+*/
+
+    Mux16(a = feedbackOutput, b = IncOut, sel = inc, out = Inc);
+    Mux16(a = Inc, b = in, sel = load, out = LoadOrInc);
+    Mux16(a = LoadOrInc, b = false, sel = reset, out = LogicOut);
+
+/**
+* Register with feedback output sent back to Incrementer and Mux
+*/
+
+    Register(in = LogicOut, load = true, out = out, out = feedbackOutput);
 }
