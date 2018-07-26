@@ -11,4 +11,27 @@
 // "white" in every pixel;
 // the screen should remain fully clear as long as no key is pressed.
 
-// Put your code here.
+    @SCREEN     // Clear screen initially
+    M = 0
+
+    (LOOP)      // Loop to listen to screen
+        @24576
+        D = M
+        @BLACKEN
+        D;JNE
+        @WHITEN
+        D;JEQ
+
+    (BLACKEN)
+        @SCREEN
+        M = -1
+        @LOOP
+        0;JEQ
+
+    (WHITEN)
+        @SCREEN
+        M = 0
+        @LOOP
+        0;JEQ
+
+
