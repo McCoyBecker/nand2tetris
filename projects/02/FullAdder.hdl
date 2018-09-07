@@ -13,5 +13,24 @@ CHIP FullAdder {
         carry;   // Left bit of a + b + c
 
     PARTS:
-    // Put you code here:
+
+    /* Compute sum and carry of a and b. */
+
+    HalfAdder(a = a, b = b, carry = carryAB, sum = sumAB);
+    Not(in = sumAB, out = notSumAB);
+
+     /* Selects for sum. */
+
+    Mux(a = sumAB, b = notSumAB, sel = c, out = sum);
+
+    /* Compute carry with c on. */
+    And(a = a, b = c, out = AndCA);
+    And(a = c, b = b, out = AndCB);
+    Or(a = AndCA, b = AndCB, out = carryC);
+
+    /* Selects for carry. */
+    
+    Mux(a = carryAB, b = carryC, sel = c, out = carry);
+
+    
 }
