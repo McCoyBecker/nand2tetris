@@ -40,24 +40,67 @@ CHIP CPU {
 
     PARTS:
 
-/**
-* Mux to A register
-*/
-    Mux16(a = instruction, b = AluOut, sel = Control0, out = Mux2A);
-    Register(in = Mux2A, load = Control3, out = A2Mux, out = addressM, out = A2PC);
+    /* A handy memory reference. */
+    // i  x  x  a  c1 c2 c3 c4 c5 c6 d1 d2 d3 j1 j2 j3
+    // 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
 
-/**
-* Mux to ALU
-*/    
+    /* Mux to A register with . */
 
-    Mux16(a = A2Mux, b = inM, sel = Control1, out = Mux2Alu);
-    Register(in = AluOut, load = Control2);
+    Mux16(a = instruction, b = Alu2D, sel = instruction[15], out = Mux2A);
 
-    ALU(x = Mux2Alu, y = D2Alu, out = outM, out = AluOut);
+    /* Control logic for A register. */
 
-/**
-* PC
-*/
+    Not(in = instruction[15], out = iSlotInstruction);
+    Or(a = iSlotInstruction, b = instruction[5], out = boolALoad);
 
-    PC(in = A2PC, reset = reset, load = Control4, inc = Control5, out = pc);
+    /* A register. */
+
+    Register(in = Mux2A, load = boolALoad, out = A2Mux, out[0..14] = addressM, out = A2PC);
+
+    /* Control logic for Mux to ALU. */
+    
+    And(a = instruction[15], b = instruction[12], out = boolSel);
+
+    /* Mux to ALU. */
+
+    Mux16(a = A2Mux, b = inM, sel = boolSel, out = Mux2ALU);
+
+    /* Control logic for D register. */
+
+    And(a = instruction[15], b = instruction[4], out = boolDLoad);
+
+    /* D register. */
+
+    Register(in = Alu2D, load = boolDLoad, out = D2ALU);
+
+    /* Control logic for PC. */
+
+    Not(in = BoolOutputZero, out = BoolOutputNonZero);
+    Not(in = BoolOutputNeg, out = BoolOutputNonNeg);
+    And(a = BoolOutputNonZero, b = BoolOutputNonNeg, out = BoolOutputPos);
+    And16(a[0] = BoolOutputNeg, a[1] = BoolOutputZero, a[2] = BoolOutputPos, a[3..15] = false, b[0] = instruction[2], b[1] = instruction[1], b[2] = instruction[0], b[3..15] = false, out[0..7] = jmpTestArray);
+    Or8Way(in = jmpTestArray, out = jmpTest);
+    And(a = instruction[15], b = jmpTest, out = boolJMP);
+    Not(in = boolJMP, out = incTest);
+
+    /* PC. */
+
+    PC(in = A2PC, reset = reset, load = boolJMP, inc = incTest, out[0..14] = pc);
+
+    /* Control logic for the ALU. */
+
+    And(a = instruction[11], b = instruction[11], out = boolZX);
+    And(a = instruction[10], b = instruction[10], out = boolNX);
+    And(a = instruction[9], b = instruction[9], out = boolZY);
+    And(a = instruction[8], b = instruction[8], out = boolNY);
+    And(a = instruction[7], b = instruction[7], out = boolF);
+    And(a = instruction[6], b = instruction[6], out = boolNO);
+
+    /* ALU. */
+
+    ALU(x = D2ALU, y = Mux2ALU, zx = boolZX, nx = boolNX, zy = boolZY, ny = boolNY, f = boolF, no = boolNO, out = outM, out = Alu2D, zr = BoolOutputZero, ng = BoolOutputNeg);
+
+    /* Control logic for writeM. */
+
+    And(a = instruction[3], b = instruction[15], out = writeM);
 }
