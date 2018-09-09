@@ -27,5 +27,28 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+
+    /* DMux to select which component gets the input. */
+
+    DMux4Way(in = load, sel = address[13..14], a = loadData1, b = loadData2, c = loadScreen, d = loadKeyboard);
+
+    /* Wrap load for the data memory using Or. */
+
+    Or(a = loadData1, b = loadData2, out = loadData);
+
+    /* The data memory. */
+
+    RAM16K(in = in, load = loadData, address = address[0..13], out = outData);
+
+    /* The keyboard. */
+
+    Keyboard(out = outKeyboard);
+
+    /* The screen. */
+
+    Screen(in = in, load = loadScreen, address = address[0..12], out = outScreen);
+
+    /* A Mux4Way16 controls which gets sent to output (same as the one selected by DMux). */
+    
+    Mux4Way16(a = outData, b = outData, c = outScreen, d = outKeyboard, sel = address[13..14], out = out);
 }

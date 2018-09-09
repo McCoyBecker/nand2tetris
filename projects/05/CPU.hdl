@@ -55,7 +55,7 @@ CHIP CPU {
 
     /* A register. */
 
-    Register(in = Mux2A, load = boolALoad, out = A2Mux, out[0..14] = addressM, out = A2PC);
+    ARegister(in = Mux2A, load = boolALoad, out = A2Mux, out[0..14] = addressM, out = A2PC);
 
     /* Control logic for Mux to ALU. */
     
@@ -71,7 +71,7 @@ CHIP CPU {
 
     /* D register. */
 
-    Register(in = Alu2D, load = boolDLoad, out = D2ALU);
+    DRegister(in = Alu2D, load = boolDLoad, out = D2ALU);
 
     /* Control logic for PC. */
 
