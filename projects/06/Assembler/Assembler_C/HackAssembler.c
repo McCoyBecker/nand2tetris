@@ -6,50 +6,19 @@
 #include <math.h>
 #include <stdbool.h>
 
+/* Define max length of symbol table. */
+
+#define MAXLENGTH 1000
+
 /* Declare functions. */
 
 char *binaryExpansion(int input);
 void translateLine(char input_line[], FILE *output_file);
 void translate(char input[], char output[]);
-char *symbolTable(char input[], bool create);
 
-/* A symbol table to handle predefined symbols and user-create symbols for the Hack machine. */
+/* A symbol table to handle predefined and user-created symbols for the Hack machine. Maximum of 1000 entries. */
 
-char *symbolTable(char input[], bool create)
-{
-    char *RAMaddress = NULL;
-
-    if (strcmp(input, "SP"))
-    {
-        RAMaddress = (char*) calloc(1,sizeof(char));
-        memcpy(RAMaddress, "0", 1);
-    }
-
-    if (strcmp(input, "LCL"))
-    {
-        RAMaddress = (char*) calloc(1,sizeof(char));
-        memcpy(RAMaddress, "1", 1);
-    }
-
-    if (strcmp(input, "ARG"))
-    {
-        RAMaddress = (char*) calloc(1,sizeof(char));
-        memcpy(RAMaddress, "2", 1);
-    }
-
-    if (strcmp(input, "THIS"))
-    {
-        RAMaddress = (char*) calloc(1,sizeof(char));
-        memcpy(RAMaddress, "3", 1);
-    }
-
-    if (strcmp(input, "THAT"))
-    {
-        RAMaddress = (char*) calloc(1,sizeof(char));
-        memcpy(RAMaddress, "4", 1);
-    }
-    return(RAMaddress);
-}
+char **symbol_table[MAXLENGTH];
 
 /* A function to determine the binary expansion of an integer. Returns the binary expansion in string form. */
 
@@ -75,7 +44,7 @@ char *binaryExpansion(int input)
     return(output);
 }
 
-/* Translation using lookup. */
+/* Translation using symbol table. */
 
 void translate(char input[], char output[])
 {
@@ -100,12 +69,10 @@ void translate(char input[], char output[])
             break;
         }
 
-        /* Else, business as usual. */
-
         else
         {
             output[i] = input[i];
-        }
+        }      
     }
 }
 
@@ -128,14 +95,12 @@ int main()
     char filename[1000];
     printf("What file should I translate?\n");
     scanf("%s", filename);
-    char namecopy[strlen(filename)];
-    memcpy(namecopy, filename, strlen(filename));
     
     /* Read in input file, generate output file. */
 
     FILE *output, *input;
     input = fopen(strcat(filename,".asm"), "r");
-    output = fopen(strcat(namecopy, ".hack"), "w+");
+    output = fopen(strcat(filename, ".hack"), "w+");
 
     /* Line by line translation. */
 
@@ -145,9 +110,7 @@ int main()
         translateLine(buffer, output);  
     }
 
-    /* Close files, return 0. */
-    
-    fclose(output);
-    fclose(input);
+    /* End. */
+
     return(0);
 }
