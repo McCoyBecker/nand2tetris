@@ -13,21 +13,21 @@ using namespace std;
 string binaryExpansion(int input)
 {
     int len = 16;
-    string output = NULL;
+    string output;
     for (int i = 0; i < len; i++)
     {
         int remainder = (input / (int) pow(2, i)) % 2;
-        char c = remainder;
-        if (c == 1)
+        if (remainder == 1)
         {
-            output[len-i-1] = '1';
+            output.push_back('1');
         }
         else
         {
-            output[len-i-1] = '0';
+            output.push_back('0');
         }
         input = input - remainder;
     }
+    std::reverse(output.begin(), output.end());
     return(output);
 }
 
@@ -35,12 +35,16 @@ string binaryExpansion(int input)
 
 struct entry
 {
+    /* An entry consists of a symbol and a memory location. */
+
     string symbol;
     string memory;
 };
 
 void entry_init(entry& E, string symbol, string memory)
 {
+    /* Initialization of an entry. */
+
     E.symbol = symbol;
     E.memory = memory;
 }
@@ -62,20 +66,9 @@ class symbolTable
     string memory_lookup(string symbol);
     void new_entry(string symbol, string memory);
     void clear_entries();
+    void print_entries();
 
 };
-
-void symbolTable::new_entry(string symbol, string memory)
-{
-    entry new_association;
-    entry_init(new_association, symbol, memory);
-    entries.push_back(new_association);
-}
-
-void symbolTable::clear_entries()
-{
-    entries.clear();
-}
 
 std::string symbolTable::memory_lookup(string symbol)
 {
@@ -98,13 +91,70 @@ std::string symbolTable::memory_lookup(string symbol)
     return(NULL);
 }
 
+void symbolTable::new_entry(string symbol, string memory)
+{
+    entry new_association;
+    entry_init(new_association, symbol, memory);
+    entries.push_back(new_association);
+}
+
+void symbolTable::clear_entries()
+{
+    entries.clear();
+}
+
+void symbolTable::print_entries()
+{
+    std::vector<entry>::iterator it;
+    cout << "The symbol table contains:\n";
+    for (it = entries.begin(); it != entries.end(); it++)
+    {
+        cout << it -> symbol << " | " << it -> memory << "\n";
+    }
+}
+
+symbolTable init_Hack_table()
+{
+    /* Pre-defined symbols in Hack. */
+
+    string predefined[7] = {"SP", "LCL", "ARG", "THIS", "THAT", "SCREEN", "KBD"};
+    string predefined_mem[7]= {"0", "1", "2", "3", "4", "16384", "24576"};
+
+    /* Create the default symbol table. */
+
+    symbolTable symbols;
+    for (int i = 0; i < 7; i++)
+    {
+        symbols.new_entry(predefined[i], binaryExpansion(stoi(predefined_mem[i])));
+    }
+
+    /* Basic RAM labels. */
+
+    string RAM[15];
+    string RAM_mem[15];
+    for (int j = 0; j < 16; j++)
+    {
+        RAM[j] = "R" + to_string(j);
+        RAM_mem[j] = to_string(j);
+        symbols.new_entry(RAM[j], binaryExpansion(stoi(RAM_mem[j])));
+    }
+    
+    /* Print out the current symbol table. */
+
+    symbols.print_entries();
+
+    /* Return the table. */
+
+    return(symbols);
+}
+
 /* Translate takes in an input line and returns the translated line. */
 
 std::string translate(string input, symbolTable symbols)
 {
     /* Instantiate output. */
 
-    string output = NULL;
+    string output;
 
     /* Declare an index for finding various elements in the input line. */
 
@@ -118,12 +168,19 @@ std::string translate(string input, symbolTable symbols)
 
     std::string::iterator it;
 
+    /* Destroy comments. */
+
+    if ((found = input.find_first_of("//") != std::string::npos))
+    {
+        return(output);
+    }
+
     /* First, try addressing with symbol @. */
 
     if ((found = input.find_first_of("@")) != std::string::npos)
     {
-        int convert_to_binary = stoi(input.substr(found, std::string::npos));
-        output = binaryExpansion(convert_to_binary);
+        int convert_to_binary = stoi(input.substr(found+1, std::string::npos));
+        return(binaryExpansion(convert_to_binary));
     }
 
     /* Now, try for calculation and memory assignment by looking for =. */
@@ -157,6 +214,11 @@ std::string translate(string input, symbolTable symbols)
         }
     }
 
+    /* Else, return input. */
+    else
+    {
+        return(input);
+    }
     /* Return output. */
 
     return(output);
@@ -165,29 +227,19 @@ std::string translate(string input, symbolTable symbols)
 /* Main. */
 int main()
 {
-    /* Pre-defined symbols in Hack. */
+    /* Initialize the default symbol table. */
 
-    char predefined[7][7] = {"SP", "LCL", "ARG", "THIS", "THAT", "SCREEN", "KBD"};
-    char predefined_mem[7][6] = {"0", "1", "2", "3", "4", "16384", "24576"};
-
-    /* Create the default symbol table. */
-
-    symbolTable symbols;
-    for (int i = 0; i < sizeof(predefined); i++)
-    {
-        symbols.new_entry(predefined[i], predefined_mem[i]);
-    }
+    symbolTable symbols = init_Hack_table();
 
     /* Declare input file and output file from user input. */
 
-    char filename[100];
-    cout << "Please enter the name of the file to be assembled\n";
+    string filename;
+    cout << "Please enter the name of the file to be assembled:\n";
     cin >> filename;
     ifstream input;
     ofstream output;
-    input.open(strcat(filename, ".asm"));
-    output.open(strcat(filename,".hack"));
-
+    input.open(filename + ".asm");
+    output.open(filename + ".hack");
     /* Translate line by line. */
 
     string line;
@@ -195,9 +247,11 @@ int main()
     {
         while (getline(input, line))
         {
-            output << translate(line, symbols) << '\n';  
+            if (!translate(line, symbols).empty())
+            {
+                output << translate(line, symbols) << '\n'; 
+            }
         }
-
         input.close();
     }
 
