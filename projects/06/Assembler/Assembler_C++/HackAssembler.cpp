@@ -80,7 +80,7 @@ std::string symbolTable::memory_lookup(string symbol)
 
     for (it = entries.begin(); it != entries.end(); it++)
     {
-        if (symbol.compare(it -> symbol))
+        if (symbol == it -> symbol)
         {
             return(it -> memory);
         }
@@ -88,7 +88,7 @@ std::string symbolTable::memory_lookup(string symbol)
 
     /* Return NULL if not found in entries. */
 
-    return(NULL);
+    return("0000000000000000");
 }
 
 void symbolTable::new_entry(string symbol, string memory)
@@ -137,6 +137,30 @@ symbolTable init_Hack_table()
         RAM[j] = "R" + to_string(j);
         RAM_mem[j] = to_string(j);
         symbols.new_entry(RAM[j], binaryExpansion(stoi(RAM_mem[j])));
+    }
+
+    /* Binary instructions for calculations, destinations, and jumps. */
+
+    string calculations[28] = {"0", "1", "-1", "D", "A", "!D", "!A", "-D", "-A", "D+1", "A+1", "D-1", "A-1", "D+A", "D-A", "A-D", "D&A", "D|A", "M", "!M", "-M", "M+1", "M-1", "D+M", "D-M", "M-D", "D&M", "D|M"};
+    string calculations_binary[28] = {"1110101010000000", "1110111111000000", "1110111010000000", "1110001100000000","1110110000000000", "1110001101000000", "1110110001000000", "1110001111000000", "1110110011000000", "1110011111000000", "1110110111000000", "1110001110000000", "1110110010000000", "1110000010000000", "1110010011000000", "1110000111000000", "1110000000000000", "1110010101000000", "1111110000000000","1111110001000000", "1111110011000000", "1111110111000000", "1111110010000000", "1111000010000000","1111010011000000", "1111000111000000", "1111000000000000", "1111010101000000"};
+    string destinations[8] = {"dest_null", "dest_M", "dest_D", "dest_MD", "dest_A", "dest_AM", "dest_AD", "dest_AMD"};
+    string destinations_binary[8] = {"0000000000000000", "0000000000001000", "0000000000010000", "0000000000011000", "0000000000100000", "0000000000101000", "0000000000110000", "0000000000111000"};
+    string jumps[8] = {"jmp_null", "jmp_JGT", "jmp_JEQ", "jmp_JGE", "jmp_JLT", "jmp_JNE", "jmp_JLE", "jmp_JMP"};
+    string jumps_binary[8] = {"0000000000000000", "0000000000000001", "0000000000000010", "0000000000000011", "0000000000000100", "0000000000000101", "0000000000000110", "0000000000000111"};
+
+    /* Input symbols for calculations */
+
+    for (int j = 0; j < 28; j++)
+    {
+        symbols.new_entry(calculations[j], calculations_binary[j]);
+    }
+
+    /* Input symbols for destinations and jumps. */
+
+    for (int k = 0; k < 8; k++)
+    {
+        symbols.new_entry(destinations[k], destinations_binary[k]);
+        symbols.new_entry(jumps[k], jumps_binary[k]);
     }
     
     /* Print out the current symbol table. */
@@ -188,10 +212,15 @@ std::string translate(string input, symbolTable symbols)
     found = input.find_first_of("=");
     if (found != std::string::npos)
     {
+        /* Slice input for easy thinking. */
+        
+        input = input.substr(first_non_space);
+
         /* Separate input string across the = sign. */
 
-        string destination = input.substr(first_non_space, found);
-        string calculation = input.substr(found, std::string::npos);
+        int calculation_slice_length = input.length() - (found + 2);
+        string destination = "dest_" + input.substr(0, found);
+        string calculation = input.substr(found+1, calculation_slice_length);
 
         /* Look up symbols in the symbol table. */
 
@@ -200,18 +229,20 @@ std::string translate(string input, symbolTable symbols)
 
         /* Generate output. */
         
-        for (int i = 0; i < sizeof(input); i++)
+        for (int i = 0; i < 16; i++)
         {
             if (destination[i] == '1' || calculation[i] == '1')
             {
-                output[i] = '1';
+                output.push_back('1');
             }
 
             else
             {
-                output[i] = '0';
+                output.push_back('0');
             }
         }
+
+        return(output);
     }
 
     /* Else, return input. */
@@ -219,9 +250,6 @@ std::string translate(string input, symbolTable symbols)
     {
         return(input);
     }
-    /* Return output. */
-
-    return(output);
 }
 
 /* Main. */
