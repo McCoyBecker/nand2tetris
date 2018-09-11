@@ -53,6 +53,12 @@ void entry_init(entry& E, string symbol, string memory)
 
 class symbolTable
 {
+    /* Declare a memory marker for user-defined symbols. */
+
+    public:
+
+    int user_marker;
+
     /* Declare a vector of entries. */
 
     private:
@@ -88,13 +94,18 @@ std::string symbolTable::memory_lookup(string symbol)
 
     /* Return NULL if not found in entries. */
 
-    return("0000000000000000");
+    return("Not found.");
 }
 
 void symbolTable::new_entry(string symbol, string memory)
 {
+    /* Declare new entry. */
+
     entry new_association;
     entry_init(new_association, symbol, memory);
+
+    /* Push onto entry vector. */
+
     entries.push_back(new_association);
 }
 
@@ -130,8 +141,9 @@ symbolTable init_Hack_table()
 
     /* Basic RAM labels. */
 
-    string RAM[15];
-    string RAM_mem[15];
+    string RAM[16];
+    string RAM_mem[16];
+
     for (int j = 0; j < 16; j++)
     {
         RAM[j] = "R" + to_string(j);
@@ -162,7 +174,7 @@ symbolTable init_Hack_table()
         symbols.new_entry(destinations[k], destinations_binary[k]);
         symbols.new_entry(jumps[k], jumps_binary[k]);
     }
-    
+
     /* Print out the current symbol table. */
 
     symbols.print_entries();
@@ -172,39 +184,117 @@ symbolTable init_Hack_table()
     return(symbols);
 }
 
-/* Translate takes in an input line and returns the translated line. */
+/* First parsing: user-defined memory sweep. Also gets rid of comments. */
 
-std::string translate(string input, symbolTable symbols)
+int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
 {
-    /* Instantiate output. */
+    /* Declare an index for removing spaces from beginning of lines. */
 
-    string output;
+    std::size_t first_non_space = input.find_first_not_of(" ");
+
+    /* Slice input for easy thinking. */
+        
+    input = input.substr(first_non_space);
+    std::size_t space_after_instruction = input.find_first_of(" ");
+    input = input.substr(0, space_after_instruction);
 
     /* Declare an index for finding various elements in the input line. */
 
     std::size_t found;
 
+    /* Destroy comments. */
+
+    if ((found = input.find_first_of("//")) != std::string::npos)
+    {
+        input = input.substr(0,found-1);
+        if (input == "//")
+        {
+            return(0);
+        }
+    }
+
+    /* Here we look for jump locations. */
+
+    std::size_t first_parenth = input.find_first_of("(");
+    std::size_t second_parenth = input.find_first_of(")");
+    if (first_parenth != std::string::npos)
+    {
+        input = input.substr(first_parenth+1,second_parenth-first_parenth-1);
+        
+        /* Check if in table. If not in table, add to table. */
+
+        if (symbols.memory_lookup(input) == "Not found.")
+        {
+            symbols.new_entry(input, binaryExpansion(line_counter));
+        }
+        return(0);
+    }
+
+    line_counter++;
+    return(0);
+}
+
+/* Second parsing: translate takes in an input line and returns the translated line. */
+
+std::string translate(string input, symbolTable& symbols)
+{
     /* Declare an index for removing spaces from beginning of lines. */
 
     std::size_t first_non_space = input.find_first_not_of(" ");
+
+    /* Slice input for easy thinking. */
+        
+    input = input.substr(first_non_space);
+    std::size_t space_after_instruction = input.find_first_of(" ");
+    input = input.substr(0, space_after_instruction);
+
+    /* Declare an index for finding various elements in the input line. */
+
+    std::size_t found;
+
+    /* Destroy comments. */
+
+    if ((found = input.find_first_of("//")) != std::string::npos)
+    {
+        input = input.substr(0,found);
+        if (input == "//" or input == "")
+        {
+            return("");
+        }
+    }
+
+    /* Instantiate output. */
+
+    string output;
 
     /* Declare iterator for input. */
 
     std::string::iterator it;
 
-    /* Destroy comments. */
-
-    if ((found = input.find_first_of("//") != std::string::npos))
-    {
-        return(output);
-    }
-
     /* First, try addressing with symbol @. */
 
     if ((found = input.find_first_of("@")) != std::string::npos)
     {
-        int convert_to_binary = stoi(input.substr(found+1, std::string::npos));
-        return(binaryExpansion(convert_to_binary));
+        /* If the address is just a number, convert to binary and return. */
+
+        if (isdigit(input[found+1]))
+        {
+            int convert_to_binary = stoi(input.substr(found+1, std::string::npos));
+            return(binaryExpansion(convert_to_binary));
+        }
+
+        else
+        {
+            int memory_slice = input.length() - (found + 2);
+            string symbol = input.substr(found+1, memory_slice);
+
+            /* If the address is a symbol, try and look it up. */
+
+            if ((output = symbols.memory_lookup(symbol)) != "Not found.")
+            {
+                return(output);
+            }
+        }
     }
 
     /* Now, try for calculation and memory assignment by looking for =. */
@@ -212,13 +302,9 @@ std::string translate(string input, symbolTable symbols)
     found = input.find_first_of("=");
     if (found != std::string::npos)
     {
-        /* Slice input for easy thinking. */
-        
-        input = input.substr(first_non_space);
-
         /* Separate input string across the = sign. */
 
-        int calculation_slice_length = input.length() - (found + 2);
+        int calculation_slice_length = input.length() - (found + 1);
         string destination = "dest_" + input.substr(0, found);
         string calculation = input.substr(found+1, calculation_slice_length);
 
@@ -245,10 +331,45 @@ std::string translate(string input, symbolTable symbols)
         return(output);
     }
 
-    /* Else, return input. */
+    /* Here, we look for ; to instantiate a possible jump. */
+
+    found = input.find_first_of(";");
+    if (found != std::string::npos)
+    {
+        /* Separate input string across the = sign. */
+
+        int jump_slice_length = input.length() - (found + 1);
+        string calculation = input.substr(0, found);
+        string jump = "jmp_" + input.substr(found+1, jump_slice_length);
+
+        /* Look up symbols in the symbol table. */
+
+        calculation = symbols.memory_lookup(calculation);
+        jump = symbols.memory_lookup(jump);
+
+        /* Generate output. */
+        
+        for (int i = 0; i < 16; i++)
+        {
+            if (jump[i] == '1' || calculation[i] == '1')
+            {
+                output.push_back('1');
+            }
+
+            else
+            {
+                output.push_back('0');
+            }
+        }
+
+        return(output);
+    }
+
+    /* Else, return an empty string. */
+
     else
     {
-        return(input);
+        return("");
     }
 }
 
@@ -268,22 +389,40 @@ int main()
     ofstream output;
     input.open(filename + ".asm");
     output.open(filename + ".hack");
-    /* Translate line by line. */
 
+    /* A first parsing: generate user-defined memory in symbol table. */
+
+    int line_counter = 0;
     string line;
     if (input.is_open())
     {
         while (getline(input, line))
         {
-            if (!translate(line, symbols).empty())
+            if (line.length() != 1)
             {
-                output << translate(line, symbols) << '\n'; 
+                user_defined_mem(line, symbols, line_counter);
+            }
+        }
+    }
+
+    /* A second parsing: now generate the assembly code. */
+
+    input.clear();
+    input.seekg(0, ios::beg);
+    if (input.is_open())
+    {
+        while (getline(input, line))
+        {
+            string translated = translate(line, symbols);
+            if (!translated.empty())
+            {
+                output << translated << "\n";
             }
         }
         input.close();
     }
 
-    /* Close files and clear memory. */
+    /* Close output. */
 
     output.close();
 
