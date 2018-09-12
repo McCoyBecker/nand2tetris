@@ -193,10 +193,13 @@ int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
     std::size_t first_non_space = input.find_first_not_of(" ");
 
     /* Slice input for easy thinking. */
-        
+    
     input = input.substr(first_non_space);
     std::size_t space_after_instruction = input.find_first_of(" ");
-    input = input.substr(0, space_after_instruction);
+    if (space_after_instruction != std::string::npos)
+    {
+        input = input.substr(0, space_after_instruction) + '\0';
+    }
 
     /* Declare an index for finding various elements in the input line. */
 
@@ -206,8 +209,8 @@ int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
 
     if ((found = input.find_first_of("//")) != std::string::npos)
     {
-        input = input.substr(0,found-1);
-        if (input == "//")
+        input = input.substr(0,found);
+        if (input == "//\0" or input == "")
         {
             return(0);
         }
@@ -230,6 +233,7 @@ int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
         return(0);
     }
 
+    cout << line_counter << "\n";
     line_counter++;
     return(0);
 }
@@ -238,15 +242,15 @@ int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
 
 std::string translate(string input, symbolTable& symbols)
 {
-    /* Declare an index for removing spaces from beginning of lines. */
-
-    std::size_t first_non_space = input.find_first_not_of(" ");
-
     /* Slice input for easy thinking. */
-        
+    
+    std::size_t first_non_space = input.find_first_not_of(" ");
     input = input.substr(first_non_space);
     std::size_t space_after_instruction = input.find_first_of(" ");
-    input = input.substr(0, space_after_instruction);
+    if (space_after_instruction != std::string::npos)
+    {
+        input = input.substr(0, space_after_instruction) + '\0';
+    }
 
     /* Declare an index for finding various elements in the input line. */
 
@@ -256,20 +260,23 @@ std::string translate(string input, symbolTable& symbols)
 
     if ((found = input.find_first_of("//")) != std::string::npos)
     {
-        input = input.substr(0,found);
-        if (input == "//" or input == "")
+        input = input.substr(0, found);
+        if (input == "//" | input == "" | input.length() == 1)
         {
             return("");
         }
     }
 
+    /* If input is empty, return empty. */
+
+    if (input.length() == 1)
+    {
+        return("");
+    }
+
     /* Instantiate output. */
 
     string output;
-
-    /* Declare iterator for input. */
-
-    std::string::iterator it;
 
     /* First, try addressing with symbol @. */
 
@@ -304,9 +311,9 @@ std::string translate(string input, symbolTable& symbols)
     {
         /* Separate input string across the = sign. */
 
-        int calculation_slice_length = input.length() - (found + 1);
+        int calculation_slice_length = input.length() - (found + 2);
         string destination = "dest_" + input.substr(0, found);
-        string calculation = input.substr(found+1, calculation_slice_length);
+        string calculation = input.substr(found + 1, calculation_slice_length);
 
         /* Look up symbols in the symbol table. */
 
@@ -338,9 +345,9 @@ std::string translate(string input, symbolTable& symbols)
     {
         /* Separate input string across the = sign. */
 
-        int jump_slice_length = input.length() - (found + 1);
+        int jump_slice_length = input.length() - (found + 2);
         string calculation = input.substr(0, found);
-        string jump = "jmp_" + input.substr(found+1, jump_slice_length);
+        string jump = "jmp_" + input.substr(found + 1, jump_slice_length);
 
         /* Look up symbols in the symbol table. */
 
