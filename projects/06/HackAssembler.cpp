@@ -304,7 +304,7 @@ std::string translate(string input, symbolTable& symbols)
     {
         /* Separate input string across the = sign. */
 
-        int calculation_slice_length = input.length() - (found + 2);
+        int calculation_slice_length = input.length() - (found + 1);
         string destination = "dest_" + input.substr(0, found);
         string calculation = input.substr(found+1, calculation_slice_length);
 
@@ -338,7 +338,7 @@ std::string translate(string input, symbolTable& symbols)
     {
         /* Separate input string across the = sign. */
 
-        int jump_slice_length = input.length() - (found + 2);
+        int jump_slice_length = input.length() - (found + 1);
         string calculation = input.substr(0, found);
         string jump = "jmp_" + input.substr(found+1, jump_slice_length);
 
