@@ -73,6 +73,7 @@ class symbolTable
     void new_entry(string symbol, string memory);
     void clear_entries();
     void print_entries();
+    void user_lookup();
 
 };
 
@@ -121,6 +122,26 @@ void symbolTable::print_entries()
     for (it = entries.begin(); it != entries.end(); it++)
     {
         cout << it -> symbol << " | " << it -> memory << "\n";
+    }
+}
+
+void symbolTable::user_lookup()
+{
+    string user_bool;
+    cout << "What you like to see something in the symbol table? Y or N. \n";
+    cin >> user_bool;
+    if (user_bool == "Y")
+    {
+        string user_stop = "GO";
+        string user_lookup;
+        while (user_stop != "STOP")
+        {
+            cout << "What do you want to see?\n";
+            cin >> user_lookup;
+            cout << memory_lookup(user_lookup) + "\n";
+            cout << "Stop or another entry? STOP or anything.\n";
+            cin >> user_stop;
+        }
     }
 }
 
@@ -238,9 +259,9 @@ int user_defined_mem(string input, symbolTable& symbols, int& line_counter)
     return(0);
 }
 
-/* Second parsing: translate takes in an input line and returns the translated line. */
+/* Second parsing: translate takes in an input line and returns the translated line. Also, if a symbol hasn't been defined yet, defines them in symbol table. */
 
-std::string translate(string input, symbolTable& symbols)
+std::string translate(string input, symbolTable& symbols, int& user_defined_counter)
 {
     /* Slice input for easy thinking. */
     
@@ -300,6 +321,16 @@ std::string translate(string input, symbolTable& symbols)
             if ((output = symbols.memory_lookup(symbol)) != "Not found.")
             {
                 return(output);
+            }
+
+            /* Else, add it to the table, starting at RAM address 16 and moving up. */
+
+            else
+            {
+                string address = binaryExpansion(user_defined_counter);
+                symbols.new_entry(symbol, address);
+                user_defined_counter++;
+                return(address);
             }
         }
     }
@@ -400,6 +431,7 @@ int main()
     /* A first parsing: generate user-defined memory in symbol table. */
 
     int line_counter = 0;
+    int user_defined_counter = 16;
     string line;
     if (input.is_open())
     {
@@ -420,7 +452,7 @@ int main()
     {
         while (getline(input, line))
         {
-            string translated = translate(line, symbols);
+            string translated = translate(line, symbols, user_defined_counter);
             if (!translated.empty())
             {
                 output << translated << "\n";
@@ -432,6 +464,9 @@ int main()
     /* Close output. */
 
     output.close();
+
+    /* Ask if the user wants to see symbol table. */
+    symbols.user_lookup();
 
     /* End. */
 
