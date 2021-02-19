@@ -1,11 +1,18 @@
-cmake_minimum_required(VERSION 3.0.0)
-project(nand2tetris VERSION 0.1.0)
+cmake_minimum_required(VERSION 3.10)
 
-include(CTest)
-enable_testing()
+if(POLICY CMP0068)
+    cmake_policy(SET CMP0068 NEW)
+    set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
+endif()
 
-add_library(nand2tetris nand2tetris.cpp)
+if(POLICY CMP0075)
+    cmake_policy(SET CMP0075 NEW)
+endif()
 
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
-include(CPack)
+if(POLICY CMP0077)
+    cmake_policy(SET CMP0077 NEW)
+endif()
+
+project(nand2tetris LANGUAGES CXX C)
+set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
+add_subdirectory(projects)
